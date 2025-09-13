@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Rally & Gaming Zone</title>
+    <!-- Use Tailwind CSS for rapid styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the game background and modal backdrop */
+        .game-background {
+            /* Using a placeholder image with a specific theme to match the event names */
+            background-image: url('https://placehold.co/1280x720/0f172a/93c5fd?text=Catch+the+Button');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hidden-button {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            border-radius: 50%;
+            background-color: #fcd34d;
+            animation: pulse-easy 2s infinite;
+            /* Enable CSS transitions for smooth movement */
+            transition: all 1s ease-in-out;
+        }
+
+        @keyframes pulse-easy {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(252, 211, 77, 0.7);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 10px rgba(252, 211, 77, 1);
+            }
+        }
+
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-dots::after {
+            content: ' .';
+            animation: dots 1s steps(5, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% {
+                color: rgba(0, 0, 0, 0);
+                text-shadow:
+                    .25em 0 0 rgba(0, 0, 0, 0),
+                    .5em 0 0 rgba(0, 0, 0, 0);
+            }
+            40% {
+                color: white;
+                text-shadow:
+                    .25em 0 0 rgba(0, 0, 0, 0),
+                    .5em 0 0 rgba(0, 0, 0, 0);
+            }
+            60% {
+                text-shadow:
+                    .25em 0 0 white,
+                    .5em 0 0 rgba(0, 0, 0, 0);
+            }
+            80%, 100% {
+                text-shadow:
+                    .25em 0 0 white,
+                    .5em 0 0 white;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center font-sans p-4">
+
+    <!-- Main Game Container -->
+    <div class="w-full max-w-4xl bg-slate-800 rounded-xl shadow-2xl overflow-hidden p-6 text-center">
+        <!-- Title and Instructions -->
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-blue-400 mb-2">Catch the Button to Unveil the Fun</h1>
+        <p class="text-lg text-slate-300 mb-6" id="instructions-text">Find the running button to unlock the forms!</p>
+
+        <!-- Game Area with Background Image -->
+        <div id="game-area" class="game-background w-full aspect-video rounded-lg shadow-inner border border-slate-700 mt-6">
+            <!-- Hidden button to be clicked -->
+            <button id="hidden-button" class="hidden-button transition-all duration-300 transform hover:scale-125"></button>
+        </div>
+    </div>
+
+    <!-- Modal for showing links (initially hidden) -->
+    <div id="link-modal" class="fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ease-in-out opacity-0 pointer-events-none modal-backdrop">
+        <div class="bg-slate-900 rounded-xl p-8 max-w-md w-full shadow-2xl transform scale-95 transition-transform duration-300 ease-in-out">
+            <!-- Modal content -->
+            <div class="text-center">
+                <h2 id="modal-title" class="text-3xl font-bold text-green-400 mb-4"></h2>
+                <img id="modal-poster" src="" alt="Event Poster" class="w-full rounded-lg mb-6">
+                <div class="flex flex-col space-y-4">
+                    <!-- Form Link -->
+                    <a id="modal-link" href="#" target="_blank" rel="noopener noreferrer" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 transform hover:scale-105 mt-6">
+                        Register Now to have Unlimed Fun!
+                    </a>
+                </div>
+            </div>
+
+            <!-- Close button for the modal -->
+            <button id="close-modal" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Get references to the HTML elements
+        const hiddenButton = document.getElementById('hidden-button');
+        const linkModal = document.getElementById('link-modal');
+        const closeModalButton = document.getElementById('close-modal');
+        const gameArea = document.getElementById('game-area');
+
+        let isGameOver = false;
+        let animationFrameId = null;
+        let lastUpdateTime = 0;
+
+        const events = [{
+            title: "Neon Rally Nite",
+            poster: "https://raw.githubusercontent.com/Chaitanya-0007/BOSM-CRISS/refs/heads/main/CRISS%20BOSM%20(2).png",
+            link: "https://forms.gle/gwr4c6XkXPUcNV7N9"
+        }, {
+            title: "Gaming Zone Tournament",
+            poster: "https://raw.githubusercontent.com/Chaitanya-0007/BOSM-CRISS/refs/heads/main/GZ%20Poster_compressed.jpg",
+            link: "https://forms.gle/vH2a3aT9mT83AZkq8"
+        }, ];
+
+        // Function to randomize the hidden button's position
+        function randomizeButtonPosition() {
+            const gameAreaRect = gameArea.getBoundingClientRect();
+            const buttonRect = hiddenButton.getBoundingClientRect();
+
+            // Subtract button dimensions to prevent it from moving off-screen
+            const maxX = gameAreaRect.width - buttonRect.width;
+            const maxY = gameAreaRect.height - buttonRect.height;
+
+            const randomX = Math.random() * maxX;
+            const randomY = Math.random() * maxY;
+
+            hiddenButton.style.left = `${randomX}px`;
+            hiddenButton.style.top = `${randomY}px`;
+        }
+
+        // Animation loop for the "running" button
+        function moveButton(timestamp) {
+            if (!isGameOver) {
+                // Update position every 1 second
+                if (timestamp - lastUpdateTime > 1000) {
+                    randomizeButtonPosition();
+                    lastUpdateTime = timestamp;
+                }
+                animationFrameId = requestAnimationFrame(moveButton);
+            }
+        }
+
+        // Function to reset the game state
+        function resetGame() {
+            isGameOver = false;
+            randomizeButtonPosition();
+            // Start the button's "running" animation
+            lastUpdateTime = performance.now();
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            animationFrameId = requestAnimationFrame(moveButton);
+        }
+
+        // Function to show the modal with the correct event details
+        function showModal(eventData) {
+            // Set modal content based on the randomly chosen event
+            document.getElementById('modal-title').textContent = eventData.title;
+            document.getElementById('modal-poster').src = eventData.poster;
+            document.getElementById('modal-link').href = eventData.link;
+
+            linkModal.classList.remove('opacity-0', 'pointer-events-none');
+            linkModal.classList.add('opacity-100');
+            linkModal.querySelector('div').classList.remove('scale-95');
+            linkModal.querySelector('div').classList.add('scale-100');
+        }
+
+        // Function to hide the modal
+        function hideModal() {
+            linkModal.classList.remove('opacity-100');
+            linkModal.classList.add('opacity-0', 'pointer-events-none');
+            linkModal.querySelector('div').classList.remove('scale-100');
+            linkModal.querySelector('div').classList.add('scale-95');
+            // Reset the game state
+            resetGame();
+        }
+
+        // Event listeners
+        hiddenButton.addEventListener('click', (event) => {
+            if (isGameOver) return;
+            isGameOver = true;
+            event.stopPropagation();
+            const randomIndex = Math.floor(Math.random() * events.length);
+            showModal(events[randomIndex]);
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+        });
+
+        closeModalButton.addEventListener('click', hideModal);
+
+        linkModal.addEventListener('click', (event) => {
+            if (event.target === linkModal) {
+                hideModal();
+            }
+        });
+
+        // Initial setup on page load
+        window.addEventListener('load', resetGame);
+        window.addEventListener('resize', randomizeButtonPosition);
+
+    </script>
+</body>
+
+</html>
