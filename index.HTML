@@ -159,7 +159,7 @@
         function moveButton(timestamp) {
             if (!isGameOver) {
                 // Update position every 1 second
-                if (timestamp - lastUpdateTime > 1000) {
+                if (timestamp - lastUpdateTime > 100) {
                     randomizeButtonPosition();
                     lastUpdateTime = timestamp;
                 }
@@ -230,3 +230,4 @@
 </body>
 
 </html>
+
